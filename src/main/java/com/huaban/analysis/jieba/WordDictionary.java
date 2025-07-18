@@ -177,8 +177,13 @@ public class WordDictionary {
                 String word = tokens[0];
 
                 double freq = 3.0d;
-                if (tokens.length == 2)
-                    freq = Double.valueOf(tokens[1]);
+                if (tokens.length >= 2) {
+                    try {
+                        freq = Double.parseDouble(tokens[tokens.length - 2]);
+                    } catch (NumberFormatException e) {
+                        Log.debug(String.format(Locale.getDefault(), "user dict %s word NumberFormatException, tokens[tokens.length - 2]:%s", userDict.toString(), tokens[tokens.length - 2]));
+                    }
+                }
                 word = addWord(word); 
                 freqs.put(word, Math.log(freq / total));
                 count++;
@@ -210,8 +215,13 @@ public class WordDictionary {
                 String word = tokens[0];
 
                 double freq = 3.0d;
-                if (tokens.length == 2)
-                    freq = Double.valueOf(tokens[1]);
+                if (tokens.length >= 2) {
+                    try{
+                        freq = Double.parseDouble(tokens[tokens.length - 2]);
+                    } catch (NumberFormatException e) {
+                        Log.debug(String.format(Locale.getDefault(), "user dict %s word NumberFormatException, tokens[tokens.length - 2]:%s", userDictPath, tokens[tokens.length - 2]));
+                    }
+                }
                 word = addWord(word);
                 freqs.put(word, Math.log(freq / total));
                 count++;
