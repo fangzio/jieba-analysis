@@ -15,18 +15,32 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 public class WordDictionary {
     private static WordDictionary singleton;
     private static final String MAIN_DICT = "/dict.txt";
     private static String USER_DICT_SUFFIX = ".dict";
+    private static final Pattern USER_DICT_WITH_TAG = Pattern.compile("^(.*\\S)\\s+(\\S+)\\s+(\\S+)\\s*$");
+    private static final Pattern USER_DICT_WITH_FREQ = Pattern.compile("^(.*\\S)\\s+(\\S+)\\s*$");
 
     public final Map<String, Double> freqs = new HashMap<String, Double>();
     public final Set<String> loadedPath = new HashSet<String>();
     private Double minFreq = Double.MAX_VALUE;
     private Double total = 0.0;
     private DictSegment _dict;
+
+    private static class DictEntry {
+        final String word;
+        final double freq;
+
+        DictEntry(String word, double freq) {
+            this.word = word;
+            this.freq = freq;
+        }
+    }
 
 
     private WordDictionary() {
@@ -107,13 +121,12 @@ public class WordDictionary {
             long s = System.currentTimeMillis();
             while (br.ready()) {
                 String line = br.readLine();
-                String[] tokens = line.split("[\t ]+");
-
-                if (tokens.length < 2)
+                DictEntry entry = parseMainDictLine(line);
+                if (entry == null)
                     continue;
 
-                String word = tokens[0];
-                double freq = Double.valueOf(tokens[1]);
+                String word = entry.word;
+                double freq = entry.freq;
                 total += freq;
                 word = addWord(word);
                 freqs.put(word, freq);
@@ -167,25 +180,13 @@ public class WordDictionary {
             int count = 0;
             while (br.ready()) {
                 String line = br.readLine();
-                String[] tokens = line.split("[\t ]+");
-
-                if (tokens.length < 1) {
-                    // Ignore empty line
+                DictEntry entry = parseUserDictLine(line, 3.0d);
+                if (entry == null) {
                     continue;
                 }
 
-                String word = tokens[0];
-
-                double freq = 3.0d;
-                if (tokens.length >= 2) {
-                    try {
-                        freq = Double.parseDouble(tokens[tokens.length - 2]);
-                    } catch (NumberFormatException e) {
-                        Log.debug(String.format(Locale.getDefault(), "user dict %s word NumberFormatException, tokens[tokens.length - 2]:%s", userDict.toString(), tokens[tokens.length - 2]));
-                    }
-                }
-                word = addWord(word); 
-                freqs.put(word, Math.log(freq / total));
+                String word = addWord(entry.word);
+                freqs.put(word, Math.log(entry.freq / total));
                 count++;
             }
             Log.debug(String.format(Locale.getDefault(), "user dict %s load finished, tot words:%d, time elapsed:%dms", userDict.toString(), count, System.currentTimeMillis() - s));
@@ -205,25 +206,13 @@ public class WordDictionary {
             int count = 0;
             while (br.ready()) {
                 String line = br.readLine();
-                String[] tokens = line.split("[\t ]+");
-
-                if (tokens.length < 1) {
-                    // Ignore empty line
+                DictEntry entry = parseUserDictLine(line, 3.0d);
+                if (entry == null) {
                     continue;
                 }
 
-                String word = tokens[0];
-
-                double freq = 3.0d;
-                if (tokens.length >= 2) {
-                    try{
-                        freq = Double.parseDouble(tokens[tokens.length - 2]);
-                    } catch (NumberFormatException e) {
-                        Log.debug(String.format(Locale.getDefault(), "user dict %s word NumberFormatException, tokens[tokens.length - 2]:%s", userDictPath, tokens[tokens.length - 2]));
-                    }
-                }
-                word = addWord(word);
-                freqs.put(word, Math.log(freq / total));
+                String word = addWord(entry.word);
+                freqs.put(word, Math.log(entry.freq / total));
                 count++;
             }
             Log.debug(String.format(Locale.getDefault(), "user dict %s load finished, tot words:%d, time elapsed:%dms", userDictPath, count, System.currentTimeMillis() - s));
@@ -249,5 +238,63 @@ public class WordDictionary {
             return freqs.get(key);
         else
             return minFreq;
+    }
+
+    private DictEntry parseMainDictLine(String line) {
+        if (line == null) {
+            return null;
+        }
+        String trimmed = line.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+
+        Matcher taggedMatcher = USER_DICT_WITH_TAG.matcher(trimmed);
+        if (taggedMatcher.matches()) {
+            try {
+                return new DictEntry(taggedMatcher.group(1), Double.parseDouble(taggedMatcher.group(2)));
+            } catch (NumberFormatException e) {
+                // fall through
+            }
+        }
+
+        Matcher freqMatcher = USER_DICT_WITH_FREQ.matcher(trimmed);
+        if (freqMatcher.matches()) {
+            try {
+                return new DictEntry(freqMatcher.group(1), Double.parseDouble(freqMatcher.group(2)));
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private DictEntry parseUserDictLine(String line, double defaultFreq) {
+        if (line == null) {
+            return null;
+        }
+        String trimmed = line.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+
+        Matcher taggedMatcher = USER_DICT_WITH_TAG.matcher(trimmed);
+        if (taggedMatcher.matches()) {
+            try {
+                return new DictEntry(taggedMatcher.group(1), Double.parseDouble(taggedMatcher.group(2)));
+            } catch (NumberFormatException e) {
+                // fall through
+            }
+        }
+
+        Matcher freqMatcher = USER_DICT_WITH_FREQ.matcher(trimmed);
+        if (freqMatcher.matches()) {
+            try {
+                return new DictEntry(freqMatcher.group(1), Double.parseDouble(freqMatcher.group(2)));
+            } catch (NumberFormatException e) {
+                // fall through
+            }
+        }
+        return new DictEntry(trimmed, defaultFreq);
     }
 }

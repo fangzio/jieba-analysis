@@ -6,10 +6,13 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
 import com.huaban.analysis.jieba.JiebaSegmenter;
+import com.huaban.analysis.jieba.SegToken;
+import com.huaban.analysis.jieba.JiebaSegmenter.SegMode;
 
 /**
  * @author Tom Qian
@@ -77,11 +80,11 @@ public class TFIDFAnalyzer
 			return tfMap; 
 		
 		JiebaSegmenter segmenter = new JiebaSegmenter();
-		List<String> segments=segmenter.sentenceProcess(content);
 		Map<String,Integer> freqMap=new HashMap<>();
 		
 		int wordSum=0;
-		for(String segment:segments) {
+		for(SegToken token:segmenter.process(content, SegMode.SEARCH)) {
+			String segment = token.word;
 			//停用词不予考虑，单字词不予考虑
 			if(!stopWordsSet.contains(segment) && segment.length()>1) {
 				wordSum++;
@@ -140,13 +143,15 @@ public class TFIDFAnalyzer
 	private void loadIDFMap(Map<String,Double> map, InputStream in ){
 		BufferedReader bufr;
 		try
-		{
-			bufr = new BufferedReader(new InputStreamReader(in));
-			String line=null;
-			while((line=bufr.readLine())!=null) {
-				String[] kv=line.trim().split(" ");
-				map.put(kv[0],Double.parseDouble(kv[1]));
-			}
+			{
+				bufr = new BufferedReader(new InputStreamReader(in));
+				String line=null;
+				while((line=bufr.readLine())!=null) {
+					int pos = line.trim().lastIndexOf(' ');
+					String word = line.trim().substring(0, pos).toLowerCase(Locale.getDefault());
+					double idf = Double.parseDouble(line.trim().substring(pos+1));
+					map.put(word, idf);
+				}
 			try
 			{
 				bufr.close();
@@ -177,4 +182,3 @@ public class TFIDFAnalyzer
 			System.out.print(word.getName()+":"+word.getTfidfvalue()+",");
 	}
 }
-

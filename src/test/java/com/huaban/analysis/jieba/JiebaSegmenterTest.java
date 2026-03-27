@@ -5,8 +5,11 @@ package com.huaban.analysis.jieba;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
@@ -212,6 +215,43 @@ public class JiebaSegmenterTest extends TestCase {
                 kwList.add(String.format("%s:%s", kw.getName(), kw.getTfidfvalue()));
             }
             System.out.println(String.format("sentence:%s, kws: [%s]", sentence, String.join(",", kwList)));
+        }
+    }
+
+    @Test
+    public void testSpace() {
+        TFIDFAnalyzer idfOjb = new TFIDFAnalyzer();
+        String[] testStr =
+                new String[]{
+                        "测试Model Y是大法师的"
+                };
+        for (String sentence : testStr) {
+            ArrayList<String> kwList = new ArrayList<String>();
+            for (Keyword kw : idfOjb.analyze(sentence, 200)) {
+                kwList.add(String.format("%s:%s", kw.getName(), kw.getTfidfvalue()));
+            }
+            System.out.println(String.format("sentence:%s, kws: [%s]", sentence, String.join(",", kwList)));
+        }
+    }
+
+    @Test
+    public void testWordWithSpaceInUserDict() throws Exception {
+        Path userDict = Files.createTempFile("jieba-space-word", ".dict");
+        try {
+            Files.write(userDict, Arrays.asList("model y 100 nz"), StandardCharsets.UTF_8);
+            WordDictionary.getInstance().loadUserDict(userDict, StandardCharsets.UTF_8);
+
+            List<SegToken> tokens = segmenter.process("测试Model Y是大法师的", SegMode.SEARCH);
+            boolean found = false;
+            for (SegToken token : tokens) {
+                if ("model y".equals(token.word)) {
+                    found = true;
+                    break;
+                }
+            }
+            assertTrue("should segment dictionary words with spaces", found);
+        } finally {
+            Files.deleteIfExists(userDict);
         }
     }
 }

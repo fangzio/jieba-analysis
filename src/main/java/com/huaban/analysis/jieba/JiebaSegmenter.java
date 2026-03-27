@@ -100,7 +100,7 @@ public class JiebaSegmenter {
         int offset = 0;
         for (int i = 0; i < paragraph.length(); ++i) {
             char ch = CharacterUtil.regularize(paragraph.charAt(i));
-            if (CharacterUtil.ccFind(ch))
+            if (CharacterUtil.ccFind(ch) || Character.isWhitespace(ch))
                 sb.append(ch);
             else {
                 if (sb.length() > 0) {
